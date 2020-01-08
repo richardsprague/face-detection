@@ -1,8 +1,11 @@
 import cv2
 import statistics
 
-draw = True
-drawEyes = False
+draw=False
+drawEyes=True
+
+#Blue, green, Red
+
 
 # Load the cascade
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
@@ -20,7 +23,7 @@ def findFaces(img: cv2) -> list:
     # Detect the faces
     faces = face_cascade.detectMultiScale(gray, 1.1, 4)
     eyes = eye_cascade.detectMultiScale(gray, 1.1, 4)
-    eyeAve=0
+
     if len(faces) > 0 and len(eyes) > 0:
         # Draw the rectangle around each face
         realFace = []
@@ -43,9 +46,9 @@ def findFaces(img: cv2) -> list:
                 1] + realFace[3] / 6:
                 #            cv2.rectangle(img, (x2, y2), (x2+w2, y2+h2), (0, 255, 0) , 2)
                 realEyes += [eyes[n]]
-            #  else:
-            #   cv2.rectangle(img, (x2, y2), (x2 + w2, y2 + h2), (0, 0, 255), 2)
+
             n += 1
+
 
         n = 0
         veryRealEyes = []
@@ -76,6 +79,9 @@ def findFaces(img: cv2) -> list:
             if draw:
                 cv2.rectangle(img, (x2, y2), (x2 + w2, y2 + h2), (0, 255, 0), 2)
 
+
+
+
         faces = realFace
         #    eyes=realEyes
 
@@ -90,8 +96,8 @@ def run_face_detection():
     left=[]
     right=[]
     calibration = 1
-    calibrationTime=20
-    calibrationCounter=calibrationTime
+    calibrationTime = 20
+    calibrationCounter = calibrationTime
 
     while frames < 1000:
         frames += 1
@@ -102,14 +108,12 @@ def run_face_detection():
         faces, eyes = findFaces(img)
         if len(faces) > 0 and len(eyes) > 0:
 
-            height = img.shape[1]
-            width = img.shape[0]
+            # height = img.shape[1]
+            # width = img.shape[0]
 
             difs = []
             for (startx, starty, w, h) in eyes:
-                sumVals = 0
-                momentx = 0
-                momenty = 0
+
                 n = 0
                 totalList = [0] * w
 
@@ -124,9 +128,6 @@ def run_face_detection():
                     total = 0
                     while y < starty + 2 * h / 3:
                         total += sum(img[y, x])
-                        # if draw:
-                        #     if y == int(starty + 2 * h / 3) - 2:
-                        #        img[y, x] = [oldTotal, oldTotal, oldTotal]
 
                         y += 1
                     x += 1
@@ -162,17 +163,16 @@ def run_face_detection():
             faceCenter=faces[0] + int(faces[2] / 2)
             if calibration<4:
                 calibrationCounter -= 1
-                print(calibrationCounter)
 
                 if calibrationCounter < 0:
                     calibrationCounter = calibrationTime
-                    calibration+=1
                     print("Test #", calibration, "Done: mean", sum(center) / len(center), "std", statistics.stdev(center))
+                    calibration += 1
                     if calibration==4:
                         leftAve=sum(left) / len(left)
                         rightAve=sum(right) / len(right)
                         centerAve=sum(center) / len(center)
-                        magnitude_change=700/(rightAve-leftAve)
+                        magnitude_change = 700/(rightAve-leftAve)
 
                 elif calibration==3: #look left
                     left+=[eyeDirection]
@@ -180,18 +180,32 @@ def run_face_detection():
 
                 elif calibration==2: #look right
                     cv2.rectangle(img, (faceCenter+300, 350), (faceCenter+400, 450), (0, 255, 0), 2)  # Calibration spot
-                    right+=[eyeDirection]
+                    right += [eyeDirection]
 
-                elif calibration==1:
+                elif calibration == 1:
                     cv2.rectangle(img, (faceCenter-50, 350), (faceCenter+50, 450), (0, 255, 0), 2)  # Calibration spot
-                    center+=[eyeDirection]
+                    center += [eyeDirection]
 
             elif draw:
-                cv2.circle(img, (int(faceCenter+(eyeDirection-centerAve)*magnitude_change), 400), 50, (0, 255, 255), 2)  # exact spot
+                cv2.circle(img, (int(faceCenter+(eyeDirection - centerAve) * magnitude_change), 400), 50, (0, 255, 255), 2)  # exact spot
 
             eyes1 = eyes[0]
 
             if drawEyes:
+                x=eyes1[1]
+                while x<eyes1[1] + eyes1[3]:
+                    y=eyes1[0]
+                    prevColor=0
+                    while y < eyes1[0] + eyes1[2]:
+
+                   #     newColor=int(img[x, y][2]/(sum(img[x,y])+1))
+                        newColor = int(sum(img[x, y])/3)
+                        img[x, y] = [abs(newColor - prevColor), abs(newColor - prevColor), abs(newColor - prevColor)]
+                #        img[x,y] = [abs(newColor-img[x, y][0]), abs(newColor-img[x, y][1]), abs(newColor-img[x, y][2])]
+                        y+=1
+                        prevColor=newColor*2
+                    x+=1
+
                 cropped = img[eyes1[1]:eyes1[1] + eyes1[3], eyes1[0]:eyes1[0] + eyes1[2]]
 
                 if cropped.shape[0] > 0:
@@ -201,12 +215,13 @@ def run_face_detection():
                     cv2.imshow("resized", resized)
 
         # Display
-        if not drawEyes:
-            cv2.imshow('img', img)
+        # if not drawEyes:
+        cv2.imshow('img', img)
         # Stop if escape key is pressed
         k = cv2.waitKey(30) & 0xff
         if k == 27:
             break
+
 
 run_face_detection()
 
