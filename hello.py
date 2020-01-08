@@ -1,4 +1,5 @@
 import cv2
+import statistics
 
 draw=True
 # Load the cascade
@@ -9,7 +10,7 @@ cap = cv2.VideoCapture(0)
 # To use a video file as input 
 #cap = cv2.VideoCapture('filename.mp4')
 
-def findFaces(img):
+def findFaces(img: cv2) -> list:
     # Convert to grayscale
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     # Detect the faces
@@ -17,22 +18,22 @@ def findFaces(img):
     eyes = eye_cascade.detectMultiScale(gray, 1.1, 4)
     if len(faces)>0 and len(eyes)>0:
       # Draw the rectangle around each face
-        realFace=[]
-        biggestArea=[0,0]
-        n=0
-        for (x,y, w, h) in faces:
-            if biggestArea[0]<w*h:
-                biggestArea=[w*h,n]
-            n+=1
+        realFace = []
+        biggestArea=[0, 0]
+        n = 0
+        for (x, y, w, h) in faces:
+            if biggestArea[0] < w * h:
+                biggestArea=[w * h, n]
+            n += 1
         realFace=faces[biggestArea[1]]
         if draw:
             cv2.rectangle(img, (realFace[0], realFace[1]), (realFace[0] + realFace[2], realFace[1] + realFace[3]), (255,0,0), 2)
    #     cv2.rectangle(img, (x, y), (x+w, y+h), (255, 0, 0), 2)
-        realEyes=[]
+        realEyes = []
         n=0
         for (x2, y2, w2, h2) in eyes:
             #if x2<realFace[0]+realFace[2] and x2>realFace[0] and y2<realFace[1]+realFace[3] and y2>realFace[1]:
-            if x2<realFace[0]+realFace[2] and x2>realFace[0] and y2<realFace[1]+realFace[3]/2 and y2>realFace[1]+realFace[3]/6:
+            if x2<realFace[0] + realFace[2] and x2 > realFace[0] and y2<realFace[1]+realFace[3]/2 and y2>realFace[1]+realFace[3]/6:
     #            cv2.rectangle(img, (x2, y2), (x2+w2, y2+h2), (0, 255, 0) , 2)
                 realEyes+=[eyes[n]]
           #  else:
@@ -63,14 +64,14 @@ def findFaces(img):
             eyes = realEyes
 
         for (x2, y2, w2, h2) in eyes:
-            y2=y2+int(h2/4)
+            y2 += int(h2/4)
             h2 = int(h2/2)
             if draw:
                 cv2.rectangle(img, (x2, y2), (x2 + w2, y2+h2), (0, 255, 0), 2)
 
         faces=realFace
     #    eyes=realEyes
-        print(faces)
+
 
         return faces, eyes
     return[[],[]]
@@ -89,26 +90,48 @@ while frames < 1000:
         height = img.shape[1]
         width = img.shape[0]
 
+        difs=[]
         for (startx, starty, w, h) in eyes:
             sumVals=0
             momentx=0
             momenty=0
+            n = 0
+            totalList=[2550]*10
+            darkest=[255000,0]
             x=startx
             total=0
             while x < w + startx:
                 y = starty
-                oldTotal=int(total/h)
+                oldTotal=int(total/h/3)
+                totalList[n]=oldTotal
+                n=(n+1)%10
+                if statistics.mean(totalList)<darkest[0]:
+                    darkest = [statistics.mean(totalList), x]
+
                 total=0
                 while y < starty + h:
                     total+=sum(img[y,x])
-                    img[y,x]=[oldTotal, oldTotal, oldTotal]
+                    if draw:
+                        img[y+100,x]=[oldTotal, oldTotal, oldTotal]
+
                     y+=1
                 x+=1
 
-
+            if draw:
+                cv2.circle(img, (darkest[1], starty + int(h / 2)), 10, (0, 255, 0), 2)
             if draw:
                 cv2.circle(img, (startx+int(w / 2), starty+ int(h / 2)), 10, (0, 0, 255), 2)
+            difs+=[startx+int(w / 2)-darkest[1]]
 
+
+
+
+            if statistics.mean(difs)>0:
+                if draw:
+                    cv2.circle(img, (0, 400), 50, (0, 255,0), 2)
+            else:
+                if draw:
+                    cv2.circle(img, (1000, 400), 50, (0, 0, 255), 2)
         #    cv2.circle(img, (averageX+startx+int(w/2), averageY+starty+int(h/2)), 10, (0, 0, 255), 2)
          #   print("yolo", averageX, averageY)
 
