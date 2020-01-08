@@ -11,6 +11,15 @@ while (True):
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
+    r = 1000.0 / gray.shape[1]
+    dim = (1000, int(gray.shape[0] * r))
+
+        # perform the actual resizing of the image and show it
+
+    cropped = gray[70:170, 440:540]
+    resized = cv2.resize(cropped, dim, interpolation=cv2.INTER_AREA)
+    cv2.imshow("resized", resized)
+
 cap.release()
 cv2.destroyAllWindows()
 
