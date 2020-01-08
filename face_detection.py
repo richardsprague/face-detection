@@ -3,6 +3,7 @@ import statistics
 
 draw = True
 drawEyes = False
+
 # Load the cascade
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml')
@@ -19,6 +20,7 @@ def findFaces(img: cv2) -> list:
     # Detect the faces
     faces = face_cascade.detectMultiScale(gray, 1.1, 4)
     eyes = eye_cascade.detectMultiScale(gray, 1.1, 4)
+    eyeAve=0
     if len(faces) > 0 and len(eyes) > 0:
         # Draw the rectangle around each face
         realFace = []
@@ -37,8 +39,8 @@ def findFaces(img: cv2) -> list:
         n = 0
         for (x2, y2, w2, h2) in eyes:
             # if x2<realFace[0]+realFace[2] and x2>realFace[0] and y2<realFace[1]+realFace[3] and y2>realFace[1]:
-            if x2 < realFace[0] + realFace[2] and x2 > realFace[0] and y2 < realFace[1] + realFace[3] / 2 and y2 > \
-                    realFace[1] + realFace[3] / 6:
+            if x2 < realFace[0] + realFace[2] and x2 > realFace[0] and realFace[1] + realFace[3] / 2 > y2 > realFace[
+                1] + realFace[3] / 6:
                 #            cv2.rectangle(img, (x2, y2), (x2+w2, y2+h2), (0, 255, 0) , 2)
                 realEyes += [eyes[n]]
             #  else:
@@ -81,10 +83,15 @@ def findFaces(img: cv2) -> list:
     return [[], []]
 
 
-
 def run_face_detection():
     'Keep running the face detection until the ESC key is pressed.'
     frames = 0
+    center=[]
+    left=[]
+    right=[]
+    calibration = 1
+    calibrationTime=20
+    calibrationCounter=calibrationTime
 
     while frames < 1000:
         frames += 1
@@ -106,42 +113,40 @@ def run_face_detection():
                 n = 0
                 totalList = [0] * w
 
-
                 x = int(startx)  # +w/4)
                 total = 0
                 while x < startx + w:  # + 3 * w / 4 :
                     y = starty + int(h / 3)
                     oldTotal = int(total / 3 / h)
                     totalList[n] = oldTotal
-                    n+=1
+                    n += 1
 
                     total = 0
                     while y < starty + 2 * h / 3:
                         total += sum(img[y, x])
                         # if draw:
-                   #     if y == int(starty + 2 * h / 3) - 2:
-                    #        img[y, x] = [oldTotal, oldTotal, oldTotal]
+                        #     if y == int(starty + 2 * h / 3) - 2:
+                        #        img[y, x] = [oldTotal, oldTotal, oldTotal]
 
                         y += 1
                     x += 1
 
-                totalList[0]=totalList[1]
+                totalList[0] = totalList[1]
 
-                small=min(totalList)
-                large=max(totalList)
-                x=startx
-                maxAverages = [255]*10
-                darkest=[2550,0]
-                n=0
+                small = min(totalList)
+                large = max(totalList)
+                x = startx
+                maxAverages = [255] * 10
+                darkest = [2550, 0]
+                n = 0
                 for i in totalList:
-                    x+=1
-                    i = (i-small)/(large-small)*255
-                    maxAverages[n]=i
-                    n=(n+1)%10
-                    if sum(maxAverages)<darkest[0]:
-                        darkest=[sum(maxAverages), x-5]
+                    x += 1
+                    i = (i - small) / (large - small) * 255
+                    maxAverages[n] = i
+                    n = (n + 1) % 10
+                    if sum(maxAverages) < darkest[0]:
+                        darkest = [sum(maxAverages), x - 5]
                     img[y, x] = [i, i, i]
-
 
                 img[y, darkest[1]] = [0, 255, 0]
 
@@ -151,16 +156,38 @@ def run_face_detection():
                     cv2.circle(img, (startx + int(w / 2), starty + int(h / 2)), 10, (0, 0, 255), 2)
                 difs += [startx + int(w / 2) - darkest[1]]
 
-                if statistics.mean(difs) < 0:
-                    if draw:
-                      #  pass
-                        cv2.circle(img, (200, 400), 50, (0, 255, 0), 2)
-                else:
-                    if draw:
-                 #       pass
-                        cv2.circle(img, (1200, 400), 50, (0, 0, 255), 2)
-            #    cv2.circle(img, (averageX+startx+int(w/2), averageY+starty+int(h/2)), 10, (0, 0, 255), 2)
-            #   print("yolo", averageX, averageY)
+         #   print(sum(difs)/len(difs))
+            eyeDirection = sum(difs) / len(difs)
+        #    print(faces)
+            faceCenter=faces[0] + int(faces[2] / 2)
+            if calibration<4:
+                calibrationCounter -= 1
+                print(calibrationCounter)
+
+                if calibrationCounter < 0:
+                    calibrationCounter = calibrationTime
+                    calibration+=1
+                    print("Test #", calibration, "Done: mean", sum(center) / len(center), "std", statistics.stdev(center))
+                    if calibration==4:
+                        leftAve=sum(left) / len(left)
+                        rightAve=sum(right) / len(right)
+                        centerAve=sum(center) / len(center)
+                        magnitude_change=700/(rightAve-leftAve)
+
+                elif calibration==3: #look left
+                    left+=[eyeDirection]
+                    cv2.rectangle(img, (faceCenter-300, 350), (faceCenter-400, 450), (0, 255, 0),2) # Calibration spot
+
+                elif calibration==2: #look right
+                    cv2.rectangle(img, (faceCenter+300, 350), (faceCenter+400, 450), (0, 255, 0), 2)  # Calibration spot
+                    right+=[eyeDirection]
+
+                elif calibration==1:
+                    cv2.rectangle(img, (faceCenter-50, 350), (faceCenter+50, 450), (0, 255, 0), 2)  # Calibration spot
+                    center+=[eyeDirection]
+
+            elif draw:
+                cv2.circle(img, (int(faceCenter+(eyeDirection-centerAve)*magnitude_change), 400), 50, (0, 255, 255), 2)  # exact spot
 
             eyes1 = eyes[0]
 
@@ -180,7 +207,6 @@ def run_face_detection():
         k = cv2.waitKey(30) & 0xff
         if k == 27:
             break
-
 
 run_face_detection()
 
