@@ -81,100 +81,108 @@ def findFaces(img: cv2) -> list:
     return [[], []]
 
 
-frames = 0
-while frames < 1000:
-    frames += 1
-    # Read the frame
-    frame, img = cap.read()
 
-    # get faces and eyes
-    faces, eyes = findFaces(img)
-    if len(faces) > 0 and len(eyes) > 0:
+def run_face_detection():
+    'Keep running the face detection until the ESC key is pressed.'
+    frames = 0
 
-        height = img.shape[1]
-        width = img.shape[0]
+    while frames < 1000:
+        frames += 1
+        # Read the frame
+        frame, img = cap.read()
 
-        difs = []
-        for (startx, starty, w, h) in eyes:
-            sumVals = 0
-            momentx = 0
-            momenty = 0
-            n = 0
-            totalList = [0] * w
+        # get faces and eyes
+        faces, eyes = findFaces(img)
+        if len(faces) > 0 and len(eyes) > 0:
+
+            height = img.shape[1]
+            width = img.shape[0]
+
+            difs = []
+            for (startx, starty, w, h) in eyes:
+                sumVals = 0
+                momentx = 0
+                momenty = 0
+                n = 0
+                totalList = [0] * w
 
 
-            x = int(startx)  # +w/4)
-            total = 0
-            while x < startx + w:  # + 3 * w / 4 :
-                y = starty + int(h / 3)
-                oldTotal = int(total / 3 / h)
-                totalList[n] = oldTotal
-                n+=1
-
+                x = int(startx)  # +w/4)
                 total = 0
-                while y < starty + 2 * h / 3:
-                    total += sum(img[y, x])
-                    # if draw:
-               #     if y == int(starty + 2 * h / 3) - 2:
-                #        img[y, x] = [oldTotal, oldTotal, oldTotal]
+                while x < startx + w:  # + 3 * w / 4 :
+                    y = starty + int(h / 3)
+                    oldTotal = int(total / 3 / h)
+                    totalList[n] = oldTotal
+                    n+=1
 
-                    y += 1
-                x += 1
+                    total = 0
+                    while y < starty + 2 * h / 3:
+                        total += sum(img[y, x])
+                        # if draw:
+                   #     if y == int(starty + 2 * h / 3) - 2:
+                    #        img[y, x] = [oldTotal, oldTotal, oldTotal]
 
-            totalList[0]=totalList[1]
+                        y += 1
+                    x += 1
 
-            small=min(totalList)
-            large=max(totalList)
-            x=startx
-            maxAverages = [255]*10
-            darkest=[2550,0]
-            n=0
-            for i in totalList:
-                x+=1
-                i = (i-small)/(large-small)*255
-                maxAverages[n]=i
-                n=(n+1)%10
-                if sum(maxAverages)<darkest[0]:
-                    darkest=[sum(maxAverages), x-5]
-                img[y, x] = [i, i, i]
+                totalList[0]=totalList[1]
+
+                small=min(totalList)
+                large=max(totalList)
+                x=startx
+                maxAverages = [255]*10
+                darkest=[2550,0]
+                n=0
+                for i in totalList:
+                    x+=1
+                    i = (i-small)/(large-small)*255
+                    maxAverages[n]=i
+                    n=(n+1)%10
+                    if sum(maxAverages)<darkest[0]:
+                        darkest=[sum(maxAverages), x-5]
+                    img[y, x] = [i, i, i]
 
 
-            img[y, darkest[1]] = [0, 255, 0]
+                img[y, darkest[1]] = [0, 255, 0]
 
-            if draw:
-                cv2.circle(img, (darkest[1], starty + int(h / 2)), 10, (0, 255, 0), 2)
-            if draw:
-                cv2.circle(img, (startx + int(w / 2), starty + int(h / 2)), 10, (0, 0, 255), 2)
-            difs += [startx + int(w / 2) - darkest[1]]
-
-            if statistics.mean(difs) < 0:
                 if draw:
-                  #  pass
-                    cv2.circle(img, (200, 400), 50, (0, 255, 0), 2)
-            else:
+                    cv2.circle(img, (darkest[1], starty + int(h / 2)), 10, (0, 255, 0), 2)
                 if draw:
-             #       pass
-                    cv2.circle(img, (1200, 400), 50, (0, 0, 255), 2)
-        #    cv2.circle(img, (averageX+startx+int(w/2), averageY+starty+int(h/2)), 10, (0, 0, 255), 2)
-        #   print("yolo", averageX, averageY)
+                    cv2.circle(img, (startx + int(w / 2), starty + int(h / 2)), 10, (0, 0, 255), 2)
+                difs += [startx + int(w / 2) - darkest[1]]
 
-        eyes1 = eyes[0]
+                if statistics.mean(difs) < 0:
+                    if draw:
+                      #  pass
+                        cv2.circle(img, (200, 400), 50, (0, 255, 0), 2)
+                else:
+                    if draw:
+                 #       pass
+                        cv2.circle(img, (1200, 400), 50, (0, 0, 255), 2)
+            #    cv2.circle(img, (averageX+startx+int(w/2), averageY+starty+int(h/2)), 10, (0, 0, 255), 2)
+            #   print("yolo", averageX, averageY)
 
-        if drawEyes:
-            cropped = img[eyes1[1]:eyes1[1] + eyes1[3], eyes1[0]:eyes1[0] + eyes1[2]]
+            eyes1 = eyes[0]
 
-            if cropped.shape[0] > 0:
-                r = 1000
-                dim = (1000, 1000)  # int(img.shape[0] * r))
-                resized = cv2.resize(cropped, dim, interpolation=cv2.INTER_AREA)
-                cv2.imshow("resized", resized)
+            if drawEyes:
+                cropped = img[eyes1[1]:eyes1[1] + eyes1[3], eyes1[0]:eyes1[0] + eyes1[2]]
 
-    # Display
-    if not drawEyes:
-        cv2.imshow('img', img)
-    # Stop if escape key is pressed
-    k = cv2.waitKey(30) & 0xff
-    if k == 27:
-        break
+                if cropped.shape[0] > 0:
+                    r = 1000
+                    dim = (1000, 1000)  # int(img.shape[0] * r))
+                    resized = cv2.resize(cropped, dim, interpolation=cv2.INTER_AREA)
+                    cv2.imshow("resized", resized)
+
+        # Display
+        if not drawEyes:
+            cv2.imshow('img', img)
+        # Stop if escape key is pressed
+        k = cv2.waitKey(30) & 0xff
+        if k == 27:
+            break
+
+
+run_face_detection()
+
 # Release the VideoCapture object
 cap.release()
